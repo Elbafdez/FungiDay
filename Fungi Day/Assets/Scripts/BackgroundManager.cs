@@ -3,9 +3,14 @@ using UnityEngine;
 
 public class BackgroundManager : MonoBehaviour
 {
-    [Header("Prefabs")]
+    [Header("Prefab base")]
     [SerializeField] private GameObject forestPrefab;
+
+    [Header("Prefabs especiales")]
     [SerializeField] private GameObject fallenTreePrefab;
+    [SerializeField] private GameObject flowerFieldPrefab;
+    [SerializeField] private GameObject rockClusterPrefab;
+    [SerializeField] private GameObject endRoutePrefab;
 
     [Header("Configuración")]
     [SerializeField] private float backgroundWidth = 18f;
@@ -21,11 +26,21 @@ public class BackgroundManager : MonoBehaviour
     // ======================== CONTADORES =========================
     private int forestCount = 0; // Contador de bosques generados antes del árbol caído
     private int forestsBeforeSpecial; // Número aleatorio de bosques que aparecerán antes del árbol caído
-    // =============================================================
+
+    // ======================== CONTROL DE PREFABS ESPECIALES =========================
+    private List<GameObject> specialPrefabs = new List<GameObject>(); // Lista de prefabs especiales en orden que se pueden generar después del prefab base
+    private int currentSpecialIndex = 0; // Índice del siguiente prefab especial a generar
+
     void Start()
     {
         // Elegimos si aparecerán 4 - 6 bosques antes del árbol caído
         forestsBeforeSpecial = Random.Range(4, 7);
+
+        // Agregamos los prefabs especiales a la lista en el ORDEN que queremos que aparezcan
+        specialPrefabs.Add(fallenTreePrefab);
+        specialPrefabs.Add(flowerFieldPrefab);
+        specialPrefabs.Add(rockClusterPrefab);
+        specialPrefabs.Add(endRoutePrefab);
 
         // Creamos los fondos iniciales y los agregamos a la lista de fondos activos
         for (int i = 0; i < initialBackgrounds; i++)
@@ -83,8 +98,10 @@ public class BackgroundManager : MonoBehaviour
             // Calculamos la posición física donde aparecerá el siguiente fondo, que será la posición del último fondo activo más el ancho del fondo.
             float newPosition = activeBackgrounds[activeBackgrounds.Count - 1].transform.position.x + backgroundWidth;
 
-            SpawnBackground(nextRouteIndex, newPosition); // Generamos el siguiente fondo en la posición calculada
-            //Si este índice ya existe en routeHistory, recuperará el prefab guardado. Si todavía no existe, generará uno nuevo y lo guardará en routeHistory.
+            if (currentSpecialIndex < specialPrefabs.Count) // Solo generamos otro fondo si todavía no hemos llegado al final de la ruta (es decir, si todavía hay prefabs especiales por generar)
+            {
+                SpawnBackground(nextRouteIndex, newPosition);
+            }
         }
     }
 
@@ -146,13 +163,20 @@ public class BackgroundManager : MonoBehaviour
 
             forestCount++;
         }
-        else // Si hemos alcanzado el número de bosques, instanciamos el árbol caído
+
+        else
         {
-            prefabToSpawn = fallenTreePrefab;
+            // Obtenemos el prefab especial que toca.
+            prefabToSpawn = specialPrefabs[currentSpecialIndex];
 
-            forestCount = 0;
+            currentSpecialIndex++; // Avanzamos al siguiente prefab especial
 
-            forestsBeforeSpecial = Random.Range(4, 7); // El siguiente grupo tendrá 4 - 6 bosques
+            forestCount = 0; // Reiniciamos el contador de bosques para el siguiente grupo de bosques antes del próximo prefab especial
+
+            if (currentSpecialIndex < specialPrefabs.Count) // Elegimos aleatoriamente cuántos bosques habrá antes del siguiente prefab especial.
+            {
+                forestsBeforeSpecial = Random.Range(4, 7);
+            }
         }
 
         // Guardamos el prefab en el historial permanente de la ruta.
@@ -172,17 +196,14 @@ public class BackgroundManager : MonoBehaviour
 
 
         // Instanciamos ese prefab.
-
         GameObject newBackground = Instantiate(
             prefabToSpawn,
             new Vector3(positionX, 0, 0), // La posición en X se calcula según la posición del último fondo activo más el ancho del fondo.
             Quaternion.identity
         );
 
-
         // Lo añadimos a la lista de fondos activos.
         activeBackgrounds.Add(newBackground);
-
 
         // También guardamos qué índice de la ruta representa.
         activeBackgroundIndexes.Add(routeIndex);
@@ -201,17 +222,11 @@ public class BackgroundManager : MonoBehaviour
             Quaternion.identity
         );
 
-
         // Como este fondo aparece antes de todos los demás, lo añadimos al principio de las listas.
-
         activeBackgrounds.Insert(0, newBackground);
-
         activeBackgroundIndexes.Insert(0, routeIndex);
     }
 }
 
 // ========================= PROBLEMAS =========================
-// 1. Cuando el jugador se mueve hacia atrás MUEVE HACIA ATRÁS, los fondos no se generan correctamente, solo se REPITE EL BOSQUE. 
-//Esto se debe a que el método SpawnNextBackgroundAtBeginning() siempre instancia un bosque, sin considerar la lógica de cuántos bosques deben aparecer antes del árbol caído. Para solucionar esto, se podría implementar una lógica similar a la de SpawnNextBackground() para decidir qué prefab instanciar al moverse hacia atrás.
-
-// 2. Por ahora el arbol caido se spawnea cada 3 o 4 bosques, y es necesario que solo se spawnee una vez, despues al implementar más prefabs especiales estes serán los siguientes en aparecer. Para solucionar esto, se podría implementar un sistema de control de prefabs especiales que determine cuál debe aparecer a continuación, en lugar de depender únicamente del conteo de bosques.
+// 1. Por ahora el arbol caido se spawnea cada 3 o 4 bosques, y es necesario que solo se spawnee una vez, despues al implementar más prefabs especiales estes serán los siguientes en aparecer. Para solucionar esto, se podría implementar un sistema de control de prefabs especiales que determine cuál debe aparecer a continuación, en lugar de depender únicamente del conteo de bosques.

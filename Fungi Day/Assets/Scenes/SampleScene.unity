@@ -150,6 +150,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BackgroundManager
   forestPrefab: {fileID: 6672401446121087299, guid: 82eb1c1f84a54784c8521b65d7250077, type: 3}
   fallenTreePrefab: {fileID: 6672401446121087299, guid: 885bf4f41083960448b03e22b0a6101a, type: 3}
+  flowerFieldPrefab: {fileID: 6672401446121087299, guid: 56da8aa91bba55248902b54a784b885f, type: 3}
+  rockClusterPrefab: {fileID: 6672401446121087299, guid: bee9898032b16734a889deffa3de245b, type: 3}
+  endRoutePrefab: {fileID: 6672401446121087299, guid: 8fb76e98cac75c34ea25ad99788bb79d, type: 3}
   backgroundWidth: 18
   initialBackgrounds: 3
 --- !u!4 &76672641
