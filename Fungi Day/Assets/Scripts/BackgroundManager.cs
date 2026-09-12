@@ -14,6 +14,7 @@ public class BackgroundManager : MonoBehaviour
 
     [Header("Configuración")]
     [SerializeField] private float backgroundWidth = 18f;
+    [SerializeField] private InvestigationPointManager investigationPointManager; // Referencia al script InvestigationPointManager para poder llamar a su método TrySpawnInvestigationPoint() y crear puntos de investigación en los fondos generados.
 
     [Header("Fondos iniciales")]
     [SerializeField] private int initialBackgrounds = 3;
@@ -202,6 +203,9 @@ public class BackgroundManager : MonoBehaviour
             Quaternion.identity
         );
 
+        // Intentamos crear un punto de investigación en este fondo llamando al método TrySpawnInvestigationPoint() del script InvestigationPointManager. Pasamos el fondo recién creado como parámetro para que el método pueda comprobar si tiene Spawn Points y decidir si crear un punto de investigación.
+        investigationPointManager.TrySpawnInvestigationPoint(newBackground);
+
         // Lo añadimos a la lista de fondos activos.
         activeBackgrounds.Add(newBackground);
 
@@ -227,6 +231,3 @@ public class BackgroundManager : MonoBehaviour
         activeBackgroundIndexes.Insert(0, routeIndex);
     }
 }
-
-// ========================= PROBLEMAS =========================
-// 1. Por ahora el arbol caido se spawnea cada 3 o 4 bosques, y es necesario que solo se spawnee una vez, despues al implementar más prefabs especiales estes serán los siguientes en aparecer. Para solucionar esto, se podría implementar un sistema de control de prefabs especiales que determine cuál debe aparecer a continuación, en lugar de depender únicamente del conteo de bosques.
