@@ -3,10 +3,11 @@ using UnityEngine;
 
 public class BackgroundManager : MonoBehaviour
 {
-    [Header("Prefab base")]
+    [Header("Prefab de fondo base")]
     [SerializeField] private GameObject forestPrefab;
 
-    [Header("Prefabs especiales")]
+    [Header("Prefabs de fondo especiales")]
+    [SerializeField] private GameObject startRoutePrefab;
     [SerializeField] private GameObject fallenTreePrefab;
     [SerializeField] private GameObject flowerFieldPrefab;
     [SerializeField] private GameObject rockClusterPrefab;
@@ -14,28 +15,28 @@ public class BackgroundManager : MonoBehaviour
 
     [Header("Configuración")]
     [SerializeField] private float backgroundWidth = 18f;
-    [SerializeField] private InvestigationPointManager investigationPointManager; // Referencia al script InvestigationPointManager para poder llamar a su método TrySpawnInvestigationPoint() y crear puntos de investigación en los fondos generados.
+    [SerializeField] private InvestigationPointManager investigationPointManager;
 
-    [Header("Fondos iniciales")]
+    [Header("Fondo inicial")]
     [SerializeField] private int initialBackgrounds = 3;
 
     // ======================== LISTAS DE FONDOS =========================
-    private List<GameObject> activeBackgrounds = new List<GameObject>(); // Lista de fondos activos actualmente en la escena, se podran destruir al salir de la pantalla y se generaran nuevos fondos al final de la lista.
-    private List<GameObject> routeHistory = new List<GameObject>(); // Lista de prefabs que han sido generados, para poder repetir la misma ruta al volver hacia atrás, no se borra al destruir los fondos, solo se agregan nuevos prefabs a la lista.
-    private List<int> activeBackgroundIndexes = new List<int>(); // Lista de índices de los prefabs que han sido generados, para saber qué prefab se generó en cada posición y poder repetir la misma ruta al volver hacia atrás, no se borra al destruir los fondos, solo se agregan nuevos índices a la lista.
+    private List<GameObject> activeBackgrounds = new List<GameObject>(); // Fondos activos actualmente en la escena.
+    private List<int> activeBackgroundIndexes = new List<int>(); // Índice de ruta que representa cada fondo activo (mismo orden que activeBackgrounds).
+    private readonly IndexedHistory<GameObject> routeHistory = new IndexedHistory<GameObject>(); // Historial de qué prefab le corresponde a cada índice de ruta.
     
     // ======================== CONTADORES =========================
     private int forestCount = 0; // Contador de bosques generados antes del árbol caído
     private int forestsBeforeSpecial; // Número aleatorio de bosques que aparecerán antes del árbol caído
 
     // ======================== CONTROL DE PREFABS ESPECIALES =========================
-    private List<GameObject> specialPrefabs = new List<GameObject>(); // Lista de prefabs especiales en orden que se pueden generar después del prefab base
+    private List<GameObject> specialPrefabs = new List<GameObject>(); // Prefabs especiales en el orden en que deben aparecer.
     private int currentSpecialIndex = 0; // Índice del siguiente prefab especial a generar
 
     void Start()
     {
         // Elegimos si aparecerán 4 - 6 bosques antes del árbol caído
-        forestsBeforeSpecial = Random.Range(4, 7);
+        forestsBeforeSpecial = Random.Range(3, 6);
 
         // Agregamos los prefabs especiales a la lista en el ORDEN que queremos que aparezcan
         specialPrefabs.Add(fallenTreePrefab);
@@ -55,12 +56,10 @@ public class BackgroundManager : MonoBehaviour
     {
         foreach (GameObject background in activeBackgrounds) // Iteramos sobre cada fondo activo
         {
-            BackgroundScroller scroller = background.GetComponent<BackgroundScroller>(); // Obtenemos el script BackgroundScroller del fondo
-
-            scroller.MoveForward(); // Llamamos al método MoveForward() del script BackgroundScroller para mover el fondo hacia la izquierda
+            background.GetComponent<BackgroundScroller>().MoveForward(); // Llamamos al método MoveForward() del script BackgroundScroller de cada fondo activo para moverlo hacia la izquierda
         }
 
-        CheckForwardBackgrounds(); // Verificamos si algún fondo ha salido completamente de la pantalla hacia la izquierda
+        CheckForwardBackgrounds(); // Verificamos si algún fondo ha salido completamente de la pantalla hacia la izquierda.
     }
 
     //========================= MOVIMIENTO HACIA ATRÁS =========================
@@ -68,28 +67,30 @@ public class BackgroundManager : MonoBehaviour
     {
         foreach (GameObject background in activeBackgrounds)
         {
-            BackgroundScroller scroller = background.GetComponent<BackgroundScroller>();
-            scroller.MoveBackward();
+            background.GetComponent<BackgroundScroller>().MoveBackward();
         }
 
-        CheckBackwardBackgrounds(); // Verificamos si algún fondo ha salido completamente de la pantalla hacia la izquierda
+        CheckBackwardBackgrounds(); // Verificamos si algún fondo ha salido completamente de la pantalla hacia la derecha.
     }
 
     //========================= COMPROBAR FONDOS IZQUIERDA =========================
     private void CheckForwardBackgrounds()  
     // Este método verifica si el primer fondo activo ha salido completamente de la pantalla hacia la izquierda. Si es así, lo destruye y genera un nuevo fondo al final de la lista.
     {
-        GameObject firstBackground = activeBackgrounds[0];
+        // Si la ruta ya ha terminado y no queda ningún fondo activo, no hay nada que comprobar.
+        if (activeBackgrounds.Count == 0) return;
+
+        GameObject firstBackground = activeBackgrounds[0]; // Obtenemos el primer fondo activo de la lista.
 
         if (firstBackground.transform.position.x <= -backgroundWidth)
         {
-            int firstRouteIndex = activeBackgroundIndexes[0]; // Guardamos el índice del primer fondo activo antes de destruirlo
-
-            Destroy(firstBackground);
+            Destroy(firstBackground); // Destruimos el primer fondo activo.
 
             // Lo eliminamos de las listas de objetos activos.
             activeBackgrounds.RemoveAt(0);
             activeBackgroundIndexes.RemoveAt(0);
+
+            if (activeBackgroundIndexes.Count == 0) return; // No queda ningún fondo de referencia para calcular el siguiente.
 
             // El siguiente fondo será el índice que viene después del último fondo activo.
             int lastRouteIndex = activeBackgroundIndexes[activeBackgroundIndexes.Count - 1]; // Obtenemos el índice del último fondo activo
@@ -99,7 +100,7 @@ public class BackgroundManager : MonoBehaviour
             // Calculamos la posición física donde aparecerá el siguiente fondo, que será la posición del último fondo activo más el ancho del fondo.
             float newPosition = activeBackgrounds[activeBackgrounds.Count - 1].transform.position.x + backgroundWidth;
 
-            if (currentSpecialIndex < specialPrefabs.Count) // Solo generamos otro fondo si todavía no hemos llegado al final de la ruta (es decir, si todavía hay prefabs especiales por generar)
+            if (currentSpecialIndex < specialPrefabs.Count) // Solo seguimos generando si todavía quedan prefabs especiales por colocar.
             {
                 SpawnBackground(nextRouteIndex, newPosition);
             }
@@ -110,24 +111,24 @@ public class BackgroundManager : MonoBehaviour
     private void CheckBackwardBackgrounds()
     // Este método verifica si el último fondo activo ha salido completamente de la pantalla hacia la derecha. Si es así, lo destruye y genera un nuevo fondo al principio de la lista.
     {
+        if (activeBackgrounds.Count == 0) return;
+
         GameObject lastBackground = activeBackgrounds[activeBackgrounds.Count - 1];
 
         if (lastBackground.transform.position.x >= backgroundWidth)
         {
-            // Guardamos el índice del último fondo antes de eliminarlo.
-            int lastRouteIndex = activeBackgroundIndexes[activeBackgroundIndexes.Count - 1];
-
             Destroy(lastBackground); // Destruimos el último fondo activo
 
             activeBackgrounds.RemoveAt(activeBackgrounds.Count - 1); // Lo eliminamos de la lista de fondos activos
             activeBackgroundIndexes.RemoveAt(activeBackgroundIndexes.Count - 1); // Lo eliminamos de la lista de índices de fondos activos
 
+            if (activeBackgroundIndexes.Count == 0) return; // No queda ningún fondo de referencia para calcular el siguiente.
+
             // Queremos recuperar el fondo anterior al primero que tenemos actualmente.
             int firstRouteIndex = activeBackgroundIndexes[0]; // Obtenemos el índice del primer fondo activo
             int previousRouteIndex = firstRouteIndex - 1; // Calculamos el índice del fondo anterior al primero que tenemos actualmente
 
-            //No podemos ir más atrás del inicio de la ruta. Si previousRouteIndex es menor que 0, significa que hemos llegado al principio.
-            if (previousRouteIndex >= 0)
+            if (previousRouteIndex >= 0)  // No podemos ir más atrás del inicio de la ruta.
             {
                 float newPosition = activeBackgrounds[0].transform.position.x - backgroundWidth;
 
@@ -136,97 +137,70 @@ public class BackgroundManager : MonoBehaviour
         }
     }
 
-    //========================= OBTENER O CREAR EL PREFAB CORRECTO =========================
-    // Este método obtiene el prefab correspondiente al índice de ruta especificado. Si el índice ya existe en routeHistory, devuelve el prefab guardado. Si no, genera un nuevo prefab y lo guarda en routeHistory.
-    private GameObject GetOrCreateBackgroundPrefab(int routeIndex)
+    //========================= DECIDIR QUÉ PREFAB LE TOCA A UN ÍNDICE NUEVO =========================
+    private GameObject DecidePrefabForNewIndex(int routeIndex)
+    // Método que decide qué prefab le corresponde a un índice de ruta nuevo. Se llama desde routeHistory.GetOrCreate(routeIndex, DecidePrefabForNewIndex) para generar un nuevo fondo si no existe uno guardado para ese índice.
     {
-        // -----------------------------------------------------
-        // CASO 1:
-        // Este punto de la ruta ya existe. Simplemente recuperamos el prefab que recordamos.
-        // -----------------------------------------------------
-
-        if (routeIndex < routeHistory.Count)
+        GameObject prefabToSpawn; // Variable que guardará el prefab que le corresponde a este índice de ruta
+ 
+        if (routeIndex == 0) // Si es el primer índice de ruta, le corresponde el prefab de inicio
         {
-            return routeHistory[routeIndex];
+            prefabToSpawn = startRoutePrefab;
         }
-
-        // -----------------------------------------------------
-        // CASO 2:
-        // Estamos avanzando a una zona nueva de la ruta. Tenemos que decidir qué prefab toca y guardarlo.
-        // -----------------------------------------------------
-
-        GameObject prefabToSpawn;
-
-
-        if (forestCount < forestsBeforeSpecial) // Si aún no hemos alcanzado el número de bosques antes del árbol caído
+        else if (forestCount < forestsBeforeSpecial) // Si aún no han aparecido suficientes bosques antes del siguiente prefab especial, le corresponde un bosque
         {
             prefabToSpawn = forestPrefab;
-
             forestCount++;
         }
-
-        else
+        else // Si ya han aparecido suficientes bosques, le corresponde el siguiente prefab especial en la lista
         {
-            // Obtenemos el prefab especial que toca.
             prefabToSpawn = specialPrefabs[currentSpecialIndex];
-
-            currentSpecialIndex++; // Avanzamos al siguiente prefab especial
-
-            forestCount = 0; // Reiniciamos el contador de bosques para el siguiente grupo de bosques antes del próximo prefab especial
-
-            if (currentSpecialIndex < specialPrefabs.Count) // Elegimos aleatoriamente cuántos bosques habrá antes del siguiente prefab especial.
+            currentSpecialIndex++;
+            forestCount = 0;
+ 
+            if (currentSpecialIndex < specialPrefabs.Count) // Si todavía quedan prefabs especiales por generar, elegimos cuántos bosques aparecerán antes del siguiente
             {
                 forestsBeforeSpecial = Random.Range(4, 7);
             }
         }
-
-        // Guardamos el prefab en el historial permanente de la ruta.
-
-        routeHistory.Add(prefabToSpawn);
-
-
-        return prefabToSpawn; // Devolvemos el prefab que acabamos de decidir
+ 
+        return prefabToSpawn;
     }
-
-    //========================= CREAR FONDO =========================
-    private void SpawnBackground(int routeIndex,float positionX)
+ 
+    //========================= CREAR FONDO (AL FINAL) =========================
+    private void SpawnBackground(int routeIndex, float positionX)
+    // Método que genera un fondo en la posición especificada y lo agrega a la lista de fondos activos
     {
-        // Primero obtenemos qué prefab corresponde a esta posición concreta de la ruta. (Nos lo dice el método GetOrCreateBackgroundPrefab())
-
-        GameObject prefabToSpawn = GetOrCreateBackgroundPrefab(routeIndex);
-
-
-        // Instanciamos ese prefab.
-        GameObject newBackground = Instantiate(
-            prefabToSpawn,
-            new Vector3(positionX, 0, 0), // La posición en X se calcula según la posición del último fondo activo más el ancho del fondo.
-            Quaternion.identity
-        );
-
-        // Intentamos crear un punto de investigación en este fondo llamando al método TrySpawnInvestigationPoint() del script InvestigationPointManager. Pasamos el fondo recién creado como parámetro para que el método pueda comprobar si tiene Spawn Points y decidir si crear un punto de investigación.
-        investigationPointManager.TrySpawnInvestigationPoint(newBackground);
-
-        // Lo añadimos a la lista de fondos activos.
-        activeBackgrounds.Add(newBackground);
-
-        // También guardamos qué índice de la ruta representa.
-        activeBackgroundIndexes.Add(routeIndex);
-    }
-
-    //========================= CREAR FONDO A LA IZQUIERDA =========================
-    private void SpawnBackgroundAtBeginning(int routeIndex, float positionX)
-    {
-        // Consultamos el historial de la ruta para ver qué prefab corresponde a este índice de ruta. Si no existe, lo creamos y lo guardamos.
-        GameObject prefabToSpawn = GetOrCreateBackgroundPrefab(routeIndex);
-
-        // Instanciamos ese prefab.
+        GameObject prefabToSpawn = routeHistory.GetOrCreate(routeIndex, DecidePrefabForNewIndex); // Obtenemos el prefab que le corresponde a este índice de ruta, ya sea recuperándolo del historial o generándolo si no existe.
+ 
         GameObject newBackground = Instantiate(
             prefabToSpawn,
             new Vector3(positionX, 0, 0),
             Quaternion.identity
         );
+ 
+        investigationPointManager.TrySpawnInvestigationPoint(newBackground, routeIndex); // Intentamos crear un punto de investigación en este fondo, si le corresponde según el índice de ruta.
 
-        // Como este fondo aparece antes de todos los demás, lo añadimos al principio de las listas.
+        // Agregamos el nuevo fondo a la lista de fondos y índices activos.
+        activeBackgrounds.Add(newBackground);
+        activeBackgroundIndexes.Add(routeIndex);
+    }
+
+    //========================= CREAR FONDO (AL PRINCIPIO) =========================
+    private void SpawnBackgroundAtBeginning(int routeIndex, float positionX)
+    // Método que genera un fondo en la posición especificada y lo agrega al principio de la lista de fondos activos
+    {
+        GameObject prefabToSpawn = routeHistory.GetOrCreate(routeIndex, DecidePrefabForNewIndex); // Obtenemos el prefab que le corresponde a este índice de ruta, ya sea recuperándolo del historial o generándolo si no existe.
+ 
+        GameObject newBackground = Instantiate(
+            prefabToSpawn,
+            new Vector3(positionX, 0, 0),
+            Quaternion.identity
+        );
+ 
+        //Al retroceder, el fondo reaparece con su punto de investigación (si tiene).
+        investigationPointManager.TrySpawnInvestigationPoint(newBackground, routeIndex);
+ 
         activeBackgrounds.Insert(0, newBackground);
         activeBackgroundIndexes.Insert(0, routeIndex);
     }

@@ -149,6 +149,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BackgroundManager
   forestPrefab: {fileID: 6672401446121087299, guid: 82eb1c1f84a54784c8521b65d7250077, type: 3}
+  startRoutePrefab: {fileID: 6672401446121087299, guid: b99b79c04ca77b140b44b97eb9121967, type: 3}
   fallenTreePrefab: {fileID: 6672401446121087299, guid: 885bf4f41083960448b03e22b0a6101a, type: 3}
   flowerFieldPrefab: {fileID: 6672401446121087299, guid: 56da8aa91bba55248902b54a784b885f, type: 3}
   rockClusterPrefab: {fileID: 6672401446121087299, guid: bee9898032b16734a889deffa3de245b, type: 3}
@@ -440,7 +441,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExplorationController
   backgroundManager: {fileID: 76672640}
-  investigationPointManager: {fileID: 1296829783}
 --- !u!212 &645603579
 SpriteRenderer:
   serializedVersion: 3
@@ -550,7 +550,8 @@ MonoBehaviour:
   - {fileID: 6228620333901272034, guid: bc3f765b3c9fe3d4bb5188420ffa93dd, type: 3}
   - {fileID: 6228620333901272034, guid: b67bb2eb99c1f7645af2710630157f7a, type: 3}
   - {fileID: 6228620333901272034, guid: dbb929b3ef811c2438c640274754a2d4, type: 3}
-  spawnChance: 50
+  minBackgroundsBetweenPoints: 1
+  maxBackgroundsBetweenPoints: 2
 --- !u!4 &1296829784
 Transform:
   m_ObjectHideFlags: 0
