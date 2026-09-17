@@ -10,7 +10,7 @@ public class InvestigationPointManager : MonoBehaviour
     [SerializeField] private int minBackgroundsBetweenPoints = 1; // Número mínimo de fondos entre punto de investigación.
     [SerializeField] private int maxBackgroundsBetweenPoints = 2; // Número máximo de fondos entre punto de investigación.
 
-    private int backgroundsUntilNextPoint = 0; // Contador de fondos hasta el próximo punto de investigación.
+    private int backgroundsUntilNextPoint; // Contador de fondos restantes antes de que se pueda generar un nuevo punto de investigación.
 
     /* 
     Guarda, para cada índice de ruta, si le tocaba punto o no (y cuál). Así, si el fondo
@@ -26,10 +26,17 @@ public class InvestigationPointManager : MonoBehaviour
         public int spawnPointIndex;
     }
 
+    private void Awake() // Inicialización del contador de fondos hasta el próximo punto de investigación. Hacemos esto en Awake para que se ejecute antes de que cualquier fondo intente generar un punto de investigación.
+    {
+        backgroundsUntilNextPoint = Random.Range(0, maxBackgroundsBetweenPoints + 1);
+    }
+
     //========================= INTENTAR CREAR UN PUNTO EN UN FONDO =========================
-    // routeIndex identifica de forma única la posición en la ruta a la que pertenece "background",
-    // y es lo que usamos como clave del historial (la misma idea que ya usaba BackgroundManager
-    // para decidir qué prefab de fondo tocaba en cada posición).
+    /*
+    routeIndex identifica de forma única la posición en la ruta a la que pertenece "background",
+    y es lo que usamos como clave del historial (la misma idea que ya usaba BackgroundManager
+    para decidir qué prefab de fondo tocaba en cada posición).
+    */
     public void TrySpawnInvestigationPoint(GameObject background, int routeIndex)
     // Esta función intenta crear un punto de investigación en el fondo dado, si corresponde según la decisión histórica o una nueva decisión.
     {
