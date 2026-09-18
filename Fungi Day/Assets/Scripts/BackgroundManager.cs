@@ -3,15 +3,8 @@ using UnityEngine;
 
 public class BackgroundManager : MonoBehaviour
 {
-    [Header("Prefab de fondo base")]
-    [SerializeField] private GameObject forestPrefab;
-
-    [Header("Prefabs de fondo especiales")]
-    [SerializeField] private GameObject startRoutePrefab;
-    [SerializeField] private GameObject fallenTreePrefab;
-    [SerializeField] private GameObject flowerFieldPrefab;
-    [SerializeField] private GameObject rockClusterPrefab;
-    [SerializeField] private GameObject endRoutePrefab;
+    [Header("Ruta")]
+    [SerializeField] private RouteDefinition route; // Aquí está TODO lo específico de esta ruta (qué fondo va primero, cuál se repite, especiales y en qué orden). Para otra ruta, se crea otro RouteDefinition y se engancha aquí — este script no cambia.
 
     [Header("Configuración")]
     [SerializeField] private float backgroundWidth = 18f;
@@ -26,23 +19,14 @@ public class BackgroundManager : MonoBehaviour
     private readonly IndexedHistory<GameObject> routeHistory = new IndexedHistory<GameObject>(); // Historial de qué prefab le corresponde a cada índice de ruta.
     
     // ======================== CONTADORES =========================
-    private int forestCount = 0; // Contador de bosques generados antes del árbol caído
-    private int forestsBeforeSpecial; // Número aleatorio de bosques que aparecerán antes del árbol caído
-
-    // ======================== CONTROL DE PREFABS ESPECIALES =========================
-    private List<GameObject> specialPrefabs = new List<GameObject>(); // Prefabs especiales en el orden en que deben aparecer.
-    private int currentSpecialIndex = 0; // Índice del siguiente prefab especial a generar
+    private int baseCount = 0; // Cuenta fondos "base" repetidos, sean bosques, praderas o lo que traiga la ruta.
+    private int baseBeforeSpecial; // Cuántos fondos base tocan antes del siguiente especial.
+ 
+    private int currentSpecialIndex = 0; // Índice del siguiente prefab especial a generar, dentro de route.specialPrefabs.
 
     void Start()
     {
-        // Elegimos si aparecerán 4 - 6 bosques antes del árbol caído
-        forestsBeforeSpecial = Random.Range(3, 6);
-
-        // Agregamos los prefabs especiales a la lista en el ORDEN que queremos que aparezcan
-        specialPrefabs.Add(fallenTreePrefab);
-        specialPrefabs.Add(flowerFieldPrefab);
-        specialPrefabs.Add(rockClusterPrefab);
-        specialPrefabs.Add(endRoutePrefab);
+        baseBeforeSpecial = Random.Range(route.minBaseBeforeSpecial, route.maxBaseBeforeSpecial + 1); // Elegimos cuántos fondos base aparecerán antes del primer especial, dentro del rango definido en la ruta.
 
         // Creamos los fondos iniciales y los agregamos a la lista de fondos activos
         for (int i = 0; i < initialBackgrounds; i++)
@@ -100,7 +84,7 @@ public class BackgroundManager : MonoBehaviour
             // Calculamos la posición física donde aparecerá el siguiente fondo, que será la posición del último fondo activo más el ancho del fondo.
             float newPosition = activeBackgrounds[activeBackgrounds.Count - 1].transform.position.x + backgroundWidth;
 
-            if (currentSpecialIndex < specialPrefabs.Count) // Solo seguimos generando si todavía quedan prefabs especiales por colocar.
+            if (currentSpecialIndex < route.specialPrefabs.Count) // Solo seguimos generando si todavía quedan especiales de esta ruta por colocar.
             {
                 SpawnBackground(nextRouteIndex, newPosition);
             }
@@ -143,24 +127,24 @@ public class BackgroundManager : MonoBehaviour
     {
         GameObject prefabToSpawn; // Variable que guardará el prefab que le corresponde a este índice de ruta
  
-        if (routeIndex == 0) // Si es el primer índice de ruta, le corresponde el prefab de inicio
+        if (routeIndex == 0) // Si es el primer fondo de la ruta, siempre es el fondo de inicio
         {
-            prefabToSpawn = startRoutePrefab;
+            prefabToSpawn = route.startPrefab;
         }
-        else if (forestCount < forestsBeforeSpecial) // Si aún no han aparecido suficientes bosques antes del siguiente prefab especial, le corresponde un bosque
+        else if (baseCount < baseBeforeSpecial) // Si todavía no hemos generado suficientes fondos base antes del siguiente especial, generamos otro fondo base
         {
-            prefabToSpawn = forestPrefab;
-            forestCount++;
+            prefabToSpawn = route.basePrefab;
+            baseCount++;
         }
-        else // Si ya han aparecido suficientes bosques, le corresponde el siguiente prefab especial en la lista
+        else // Si ya hemos generado suficientes fondos base, generamos el siguiente fondo especial en el orden definido en la ruta
         {
-            prefabToSpawn = specialPrefabs[currentSpecialIndex];
+            prefabToSpawn = route.specialPrefabs[currentSpecialIndex];
             currentSpecialIndex++;
-            forestCount = 0;
+            baseCount = 0;
  
-            if (currentSpecialIndex < specialPrefabs.Count) // Si todavía quedan prefabs especiales por generar, elegimos cuántos bosques aparecerán antes del siguiente
+            if (currentSpecialIndex < route.specialPrefabs.Count) // Si todavía quedan especiales por generar, elegimos cuántos fondos base aparecerán antes del siguiente especial, dentro del rango definido en la ruta.
             {
-                forestsBeforeSpecial = Random.Range(4, 7);
+                baseBeforeSpecial = Random.Range(route.minBaseBeforeSpecial, route.maxBaseBeforeSpecial + 1);
             }
         }
  

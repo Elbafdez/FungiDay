@@ -3,32 +3,28 @@ using UnityEngine;
 
 public class InvestigationPointManager : MonoBehaviour
 {
-    [Header("Puntos de investigación")]
-    [SerializeField] private List<GameObject> investigationPointPrefabs = new List<GameObject>(); // Lista de prefabs de puntos de investigación.
-
-    [Header("Separación entre puntos")]
-    [SerializeField] private int minBackgroundsBetweenPoints = 1; // Número mínimo de fondos entre punto de investigación.
-    [SerializeField] private int maxBackgroundsBetweenPoints = 2; // Número máximo de fondos entre punto de investigación.
-
-    private int backgroundsUntilNextPoint; // Contador de fondos restantes antes de que se pueda generar un nuevo punto de investigación.
-
-    /* 
-    Guarda, para cada índice de ruta, si le tocaba punto o no (y cuál). Así, si el fondo
-    con ese índice se destruye y se vuelve a crear más tarde (al retroceder y volver a
-    avanzar), el resultado es siempre el mismo en vez de volver a tirar los dados.
-    */
-    private readonly IndexedHistory<PointDecision> pointHistory = new IndexedHistory<PointDecision>(); // Declaración de la variable pointHistory, que es un IndexedHistory de PointDecision. Esto permite almacenar decisiones sobre la presencia de puntos de investigación en fondos específicos.
+    [Header("Ruta")]
+    [SerializeField] private RouteDefinition route; // El MISMO asset que se asigna en BackgroundManager. De aquí salen las setas permitidas en esta ruta y la separación entre ellas.
  
-    private class PointDecision // Clase para almacenar la decisión de si un fondo tiene un punto de investigación y cuál es.
+    private int backgroundsUntilNextPoint; // Cuántos fondos quedan por pasar antes de que se PUEDA generar el siguiente punto.
+ 
+    /* Guarda, para cada índice de ruta, si le tocaba punto o no (y cuál). Así, si el fondo
+    con ese índice se destruye y se vuelve a crear más tarde (al retroceder y volver a
+    avanzar), el resultado es siempre el mismo en vez de volver a tirar los dados. */
+    private readonly IndexedHistory<PointDecision> pointHistory = new IndexedHistory<PointDecision>();
+ 
+    private class PointDecision
     {
         public bool hasPoint;
         public int prefabIndex;
         public int spawnPointIndex;
     }
 
-    private void Awake() // Inicialización del contador de fondos hasta el próximo punto de investigación. Hacemos esto en Awake para que se ejecute antes de que cualquier fondo intente generar un punto de investigación.
+    private void Awake()
     {
-        backgroundsUntilNextPoint = Random.Range(0, maxBackgroundsBetweenPoints + 1);
+        /* Inicialización del contador de fondos hasta el próximo punto de investigación. 
+        Hacemos esto en Awake para que se ejecute antes de que cualquier fondo intente generar un punto de investigación. */
+        backgroundsUntilNextPoint = Random.Range(0, route.maxBackgroundsBetweenPoints + 1);
     }
 
     //========================= INTENTAR CREAR UN PUNTO EN UN FONDO =========================
@@ -56,7 +52,7 @@ public class InvestigationPointManager : MonoBehaviour
  
         if (!decision.hasPoint) return; // Si la decisión es que no hay punto de investigación, no hacemos nada.
  
-        if (investigationPointPrefabs.Count == 0) // Si no hay prefabs de puntos de investigación asignados, mostramos una advertencia y salimos.
+        if (route.investigationPointPrefabs.Count == 0) // Si no hay prefabs de puntos de investigación asignados, mostramos una advertencia y salimos.
         {
             Debug.LogWarning("No hay prefabs asignados en InvestigationPointManager.");
             return;
@@ -64,7 +60,7 @@ public class InvestigationPointManager : MonoBehaviour
 
         // Instanciamos el punto de investigación en la posición del spawn point seleccionado y con la rotación por defecto (Quaternion.identity).
         Transform selectedSpawnPoint = spawnPoints[decision.spawnPointIndex];
-        GameObject prefabToSpawn = investigationPointPrefabs[decision.prefabIndex];
+        GameObject prefabToSpawn = route.investigationPointPrefabs[decision.prefabIndex];
  
         GameObject newPoint = Instantiate(prefabToSpawn, selectedSpawnPoint.position, Quaternion.identity);
  
@@ -87,9 +83,9 @@ public class InvestigationPointManager : MonoBehaviour
         // Si hemos llegado al número mínimo de fondos entre puntos, decidimos que este fondo tendrá un punto de investigación. Seleccionamos aleatoriamente un índice de spawn point y un índice de prefab de punto de investigación.
         decision.hasPoint = true;
         decision.spawnPointIndex = Random.Range(0, spawnPointCount);
-        decision.prefabIndex = Random.Range(0, investigationPointPrefabs.Count);
+        decision.prefabIndex = Random.Range(0, route.investigationPointPrefabs.Count);
  
-        backgroundsUntilNextPoint = Random.Range(minBackgroundsBetweenPoints, maxBackgroundsBetweenPoints + 1); // Reiniciamos el contador de fondos hasta el próximo punto de investigación, eligiendo un número aleatorio dentro del rango especificado.
+        backgroundsUntilNextPoint = Random.Range(route.minBackgroundsBetweenPoints, route.maxBackgroundsBetweenPoints + 1); // Reiniciamos el contador de fondos hasta el próximo punto de investigación, eligiendo un número aleatorio dentro del rango especificado.
  
         return decision;
     }
